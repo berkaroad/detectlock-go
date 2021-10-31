@@ -14,7 +14,7 @@ goroutine的锁信息记录，采用分片锁，降低了多线程并发竞争�
 
 ```go
 import (
-    "github.com/berkaroad/detectlock-go/detectlock"
+    "github.com/berkaroad/detectlock-go"
 )
 
 // 应用启动时，设置启用调试

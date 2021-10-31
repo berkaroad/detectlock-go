@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/berkaroad/detectlock-go/detectlock"
+	"github.com/berkaroad/detectlock-go"
 )
 
 var Locker4 *detectlock.RWMutex
