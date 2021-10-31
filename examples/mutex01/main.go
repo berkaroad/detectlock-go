@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/berkaroad/detectlock-go"
+	"github.com/berkaroad/detectlock-go/detectlock"
 )
 
 var Locker1 sync.Locker

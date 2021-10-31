@@ -13,6 +13,10 @@ goroutine的锁信息记录，采用分片锁，降低了多线程并发竞争�
 ## 用法
 
 ```go
+import (
+    "github.com/berkaroad/detectlock-go/detectlock"
+)
+
 // 应用启动时，设置启用调试
 detectlock.EnableDebug()
 
