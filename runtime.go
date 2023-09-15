@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 var getGoroutineID func() uint64
@@ -26,4 +27,21 @@ func SetGetGoroutineIDFunc(f func() uint64) {
 	if f != nil {
 		getGoroutineID = f
 	}
+}
+
+func getCaller(minimumCallerDepth int) *runtime.Frame {
+	// Restrict the lookback frames to avoid runaway lookups
+	pcs := make([]uintptr, 10)
+	depth := runtime.Callers(minimumCallerDepth, pcs)
+	frames := runtime.CallersFrames(pcs[:depth])
+
+	for f, more := frames.Next(); more; f, more = frames.Next() {
+		// If the caller isn't part of this package, we're done
+		if !strings.Contains(f.Function, "github.com/berkaroad/detectlock-go.") {
+			return &f //nolint:scopelint
+		}
+	}
+
+	// if we got here, we failed to find the caller's context
+	return nil
 }
