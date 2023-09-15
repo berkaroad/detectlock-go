@@ -17,7 +17,7 @@ func acquire(lockerPtr uintptr, rLocker bool, doLock func()) {
 		if exists, ok := mapShard.items[gid]; ok {
 			lockers = exists
 		} else {
-			lockers = make([]*LockerState, 0)
+			lockers = make([]*LockerState, 0, 16)
 		}
 		locker = &LockerState{LockerPtr: lockerPtr, Status: StatusWait, RLocker: rLocker}
 		lockers = append(lockers, locker)
@@ -47,7 +47,7 @@ func tryAcquire(lockerPtr uintptr, rLocker bool, tryLock func() bool) bool {
 			if exists, ok := mapShard.items[gid]; ok {
 				lockers = exists
 			} else {
-				lockers = make([]*LockerState, 0)
+				lockers = make([]*LockerState, 0, 16)
 			}
 			locker = &LockerState{LockerPtr: lockerPtr, Status: StatusAcquired, RLocker: rLocker}
 			lockers = append(lockers, locker)
