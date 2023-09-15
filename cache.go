@@ -2,6 +2,7 @@ package detectlock
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -16,19 +17,12 @@ const (
 
 var cache cacheMap
 
-func init() {
-	cache = make(cacheMap, shardCount)
-	var i uint64 = 0
-	for ; i < shardCount; i++ {
-		cache[i] = &cacheMapShard{items: make(map[uint64][]*LockerState)}
-	}
-}
-
 // LockerState the state of locker.
 type LockerState struct {
 	LockerPtr uintptr
 	Status    byte
 	RLocker   bool
+	Caller    *runtime.Frame
 }
 
 // String of LockerState, format: (<locker-id>, <locker-status>)
@@ -40,7 +34,12 @@ func (l LockerState) String() string {
 	if l.RLocker {
 		status = "r-" + status
 	}
-	return fmt.Sprintf("(%#x, %s)", l.LockerPtr, status)
+
+	stackInfo := ""
+	if l.Caller != nil {
+		stackInfo = fmt.Sprintf("%s (file: %s:%d)", l.Caller.Function, l.Caller.File, l.Caller.Line)
+	}
+	return fmt.Sprintf("(%#x, %s, %s)", l.LockerPtr, status, stackInfo)
 }
 
 // LockerStateList the list of LockerState
@@ -102,67 +101,14 @@ type cacheMapShard struct {
 	items  map[uint64][]*LockerState
 }
 
-func acquire(lockerPtr uintptr, rLocker bool, doLock func()) {
-	gid := getGoroutineID()
-	shardKey := gid % shardCount
-	mapShard := cache[shardKey]
-	var locker *LockerState
-
-	func() {
-		defer mapShard.locker.Unlock()
-		mapShard.locker.Lock()
-		var lockers []*LockerState
-		if exists, ok := mapShard.items[gid]; ok {
-			lockers = exists
-		} else {
-			lockers = make([]*LockerState, 0)
-		}
-		locker = &LockerState{LockerPtr: lockerPtr, Status: StatusWait, RLocker: rLocker}
-		lockers = append(lockers, locker)
-		mapShard.items[gid] = lockers
-	}()
-	doLock()
-	locker.Status = StatusAcquired
-}
-
-func release(lockerPtr uintptr, rLocker bool, doUnlock func()) {
-	doUnlock()
-
-	gid := getGoroutineID()
-	shardKey := gid % shardCount
-	mapShard := cache[shardKey]
-
-	defer mapShard.locker.Unlock()
-	mapShard.locker.Lock()
-	if lockers, ok := mapShard.items[gid]; ok {
-		removeIndex := -1
-		for i := 0; i < len(lockers); i++ {
-			l := lockers[i]
-			if l.LockerPtr == lockerPtr && l.Status == StatusAcquired && l.RLocker == rLocker {
-				removeIndex = i
-				break
-			}
-		}
-		if removeIndex < 0 {
-			return
-		}
-		llen := len(lockers)
-		if llen == 1 {
-			lockers = nil
-		} else {
-			lockers = append(lockers[:removeIndex], lockers[removeIndex+1:]...)
-		}
-		if len(lockers) == 0 {
-			delete(mapShard.items, gid)
-		} else {
-			mapShard.items[gid] = lockers
-		}
-	}
-}
-
 func clear() {
+	cache = make(cacheMap, shardCount)
+}
+
+func reset() {
+	cache = make(cacheMap, shardCount)
 	var i uint64 = 0
 	for ; i < shardCount; i++ {
-		cache[i].items = make(map[uint64][]*LockerState)
+		cache[i] = &cacheMapShard{items: make(map[uint64][]*LockerState)}
 	}
 }

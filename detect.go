@@ -10,6 +10,7 @@ var debug bool
 
 // EnableDebug enable for debug
 func EnableDebug() {
+	reset()
 	debug = true
 }
 
