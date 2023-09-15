@@ -22,7 +22,7 @@ func (l *RWMutex) RLock() {
 func (l *RWMutex) TryRLock() bool {
 	if debug {
 		lockerPtr := reflect.ValueOf(l).Pointer()
-		return tryAcquire(lockerPtr, false, l.rwm.TryRLock)
+		return tryAcquire(lockerPtr, true, l.rwm.TryRLock)
 	} else {
 		return l.rwm.TryRLock()
 	}
